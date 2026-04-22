@@ -1,6 +1,8 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
+from app.paths import get_env_path
+
 
 class Settings(BaseSettings):
     # AI API
@@ -20,7 +22,7 @@ class Settings(BaseSettings):
     api_request_interval: int = 6
     
     class Config:
-        env_file = ".env"
+        env_file = get_env_path()
         env_file_encoding = "utf-8"
         case_sensitive = False
 

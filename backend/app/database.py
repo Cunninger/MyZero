@@ -1,10 +1,9 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
-import os
 
-# Use SQLite in backend directory
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'myzero.db')}"
+from app.paths import get_database_path
+
+DATABASE_URL = f"sqlite:///{get_database_path()}"
 
 engine = create_engine(
     DATABASE_URL,
