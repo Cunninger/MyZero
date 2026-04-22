@@ -688,20 +688,68 @@ async def get_optimization_progress(record_id: int, db: Session = Depends(get_db
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
 
+    # Determine stages from mode
+    mode = record.mode
+    if mode == "combined":
+        stages = ["polish", "enhance"]
+    elif mode == "polish":
+        stages = ["polish"]
+    elif mode == "humanize":
+        stages = ["enhance"]
+    else:
+        stages = [mode]
+    total_stages = len(stages)
+
+    total = record.total_segments or 1
+
     completed_count = db.query(OptimizationSegment).filter(
         OptimizationSegment.record_id == record_id,
         OptimizationSegment.status == "completed",
     ).count()
 
-    total = record.total_segments or 1
+    # Old-style global progress (for backwards compatibility)
     progress = (completed_count / total) * 100 if total > 0 else 0
+
+    # Calculate stage-aware overall progress
+    if record.status == "completed":
+        overall_progress = 100.0
+        stage_index = total_stages - 1
+    else:
+        processing_segment = db.query(OptimizationSegment).filter(
+            OptimizationSegment.record_id == record_id,
+            OptimizationSegment.status == "processing",
+        ).order_by(OptimizationSegment.segment_index).first()
+
+        if processing_segment and processing_segment.stage in stages:
+            stage_index = stages.index(processing_segment.stage)
+            seg_idx = processing_segment.segment_index
+            overall_progress = (stage_index + seg_idx / total) / total_stages * 100
+        else:
+            last_completed = db.query(OptimizationSegment).filter(
+                OptimizationSegment.record_id == record_id,
+                OptimizationSegment.status == "completed",
+            ).order_by(OptimizationSegment.segment_index.desc()).first()
+
+            if last_completed and last_completed.stage in stages:
+                stage_index = stages.index(last_completed.stage)
+                seg_idx = last_completed.segment_index + 1
+                if seg_idx >= total:
+                    seg_idx = 0
+                    stage_index = min(stage_index + 1, total_stages - 1)
+                overall_progress = (stage_index + seg_idx / total) / total_stages * 100
+            else:
+                stage_index = 0
+                overall_progress = 0.0
 
     return ProgressUpdate(
         record_id=record.id,
         status=record.status,
         progress=round(progress, 1),
+        overall_progress=round(overall_progress, 1),
         current_position=completed_count,
         total_segments=total,
+        stage_index=stage_index,
+        total_stages=total_stages,
         error_message=record.error_message,
     )
 

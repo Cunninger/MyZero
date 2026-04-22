@@ -105,8 +105,11 @@ class ProgressUpdate(BaseModel):
     record_id: int
     status: str
     progress: float = 0.0
+    overall_progress: float = 0.0
     current_position: int = 0
     total_segments: int = 0
+    stage_index: int = 0
+    total_stages: int = 1
     error_message: Optional[str] = None
 
 

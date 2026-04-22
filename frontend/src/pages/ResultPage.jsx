@@ -20,6 +20,7 @@ const ResultPage = () => {
   const [currentStage, setCurrentStage] = useState('')
   const [showExportModal, setShowExportModal] = useState(false)
   const [stageProgress, setStageProgress] = useState({ stageIndex: 0, totalStages: 1 })
+  const [overallProgress, setOverallProgress] = useState(0)
   const [parsingMessage, setParsingMessage] = useState('')
   const eventSourceRef = useRef(null)
   const pollRef = useRef(null)
@@ -65,6 +66,11 @@ const ResultPage = () => {
           completed: progRes.data.current_position || 0,
           total: progRes.data.total_segments || 0,
         })
+        if (progRes.data.overall_progress !== undefined) {
+          setOverallProgress(progRes.data.overall_progress)
+        } else {
+          setOverallProgress(Math.round((progRes.data.current_position || 0) / (progRes.data.total_segments || 1) * 100))
+        }
       } catch (_) {}
     } catch (error) {
       toast.error('加载记录失败')
@@ -108,6 +114,11 @@ const ResultPage = () => {
               completed: (data.segment_index || 0) + 1,
               total: data.total_segments,
             })
+          }
+
+          if (data.progress !== undefined) {
+            const newProgress = Math.round(data.progress * 100)
+            setOverallProgress(prev => Math.max(prev, newProgress))
           }
 
           optimizeAPI.getSegments(id).then(segRes => {
@@ -165,12 +176,6 @@ const ResultPage = () => {
           setRecord(data)
           cleanup()
           loadDetail()
-        } else {
-          const progRes = await optimizeAPI.getProgress(id)
-          setProgress({
-            completed: progRes.data.current_position || 0,
-            total: progRes.data.total_segments || 0,
-          })
         }
       } catch (_) {}
     }, 5000)
@@ -357,16 +362,12 @@ const ResultPage = () => {
             </span>
           </div>
 
-          {progress.total > 0 && (
+          {(progress.total > 0 || overallProgress > 0) && (
             <div className="space-y-2">
               <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-primary-500 via-blue-500 to-violet-500 h-full rounded-full transition-all duration-500 ease-out progress-shimmer"
-                  style={{
-                    width: stageProgress.totalStages > 1
-                      ? `${((stageProgress.stageIndex + progress.completed / progress.total) / stageProgress.totalStages) * 100}%`
-                      : `${(progress.completed / progress.total) * 100}%`
-                  }}
+                  style={{ width: `${overallProgress}%` }}
                 />
               </div>
               <div className="flex justify-between">
@@ -375,11 +376,7 @@ const ResultPage = () => {
                     ? `阶段 ${stageProgress.stageIndex + 1}/${stageProgress.totalStages}`
                     : ''}
                 </p>
-                <p className="text-xs text-slate-400">
-                  {stageProgress.totalStages > 1
-                    ? `${Math.round(((stageProgress.stageIndex + progress.completed / progress.total) / stageProgress.totalStages) * 100)}%`
-                    : `${Math.round((progress.completed / progress.total) * 100)}%`}
-                </p>
+                <p className="text-xs text-slate-400">{overallProgress}%</p>
               </div>
             </div>
           )}
