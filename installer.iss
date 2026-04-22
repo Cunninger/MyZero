@@ -1,7 +1,7 @@
 #define MyAppName "MyZero"
 #define MyAppPublisher "cunninger"
 #define MyAppExeName "MyZero.exe"
-#define MyAppVersion Trim(FileRead(FileOpen("backend\app\paths.py")))
+#define MyAppVersion Trim(FileRead(FileOpen("VERSION")))
 
 ; Fallback: manually set version if FileRead approach doesn't work
 ; #define MyAppVersion "1.0.0"
