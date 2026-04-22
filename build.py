@@ -48,6 +48,7 @@ def main():
             ["npm", "run", "build"],
             cwd=str(ROOT / "frontend"),
             check=True,
+            shell=True,
         )
         dist_index = ROOT / "frontend" / "dist" / "index.html"
         if not dist_index.exists():
@@ -66,6 +67,7 @@ def main():
             ["pyinstaller", "myzero.spec", "--clean", "--noconfirm"],
             cwd=str(ROOT),
             check=True,
+            shell=True,
         )
         exe_path = ROOT / "dist" / "MyZero" / "MyZero.exe"
         if not exe_path.exists():
@@ -100,6 +102,7 @@ def main():
                 [candidate, "/?"],
                 capture_output=True,
                 timeout=5,
+                shell=True,
             )
             if result.returncode == 0:
                 iscc = candidate
@@ -117,6 +120,7 @@ def main():
         [iscc, str(iss_path)],
         cwd=str(ROOT),
         check=True,
+        shell=True,
     )
 
     version = be_ver

@@ -29,17 +29,21 @@ jobs:
         pip install -r backend/requirements.txt
         pip install pyinstaller
 
-    - name: Install frontend dependencies
-      run: cd frontend && npm ci
+    - name: Install frontend dependencies and build
+      run: cd frontend && npm ci && npm run build
 
-    - name: Build
-      run: python build.py
+    - name: Build with PyInstaller
+      run: pyinstaller myzero.spec --clean --noconfirm
+
+    - name: Copy runtime assets
+      run: |
+        copy backend\.env.example dist\MyZero\.env
 
     - name: Install Inno Setup
       run: choco install innosetup --yes
 
     - name: Build installer
-      run: python build.py --installer-only
+      run: ISCC installer.iss
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
