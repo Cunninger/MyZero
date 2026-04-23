@@ -237,8 +237,11 @@ const ResultPage = () => {
   }
 
   const getOriginalText = () => {
+    if (record?.status === 'completed' && record?.original_text) {
+      return record.original_text
+    }
     if (segments.length > 0) {
-      return segments
+      return [...segments]
         .sort((a, b) => a.segment_index - b.segment_index)
         .map(seg => seg.original_text)
         .join('\n\n')
@@ -248,8 +251,11 @@ const ResultPage = () => {
 
   const getOptimizedText = () => {
     if (streamingText) return streamingText
+    if (record?.status === 'completed' && record?.optimized_text) {
+      return record.optimized_text
+    }
     if (segments.length > 0) {
-      return segments
+      return [...segments]
         .sort((a, b) => a.segment_index - b.segment_index)
         .map(seg => seg.optimized_text || seg.original_text)
         .join('\n\n')
