@@ -56,9 +56,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Clean old artifacts
+      shell: pwsh
       run: |
-        if exist output rmdir /s /q output
-        if exist dist rmdir /s /q dist
+        if (Test-Path output) { Remove-Item -Recurse -Force output }
+        if (Test-Path dist) { Remove-Item -Recurse -Force dist }
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
