@@ -1,0 +1,28 @@
+name: Feature Request
+about: 功能建议 / Suggest a feature
+title: '[Feature] '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎提出新想法！请描述清楚你想实现的功能和使用场景。
+        Suggestions are welcome! Please describe the feature and its use case.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题或痛点 / Problem
+      description: 你目前在什么场景下遇到了不便？
+      placeholder: |
+        例如：目前只能导出 txt，希望支持导出 Word 文档
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的解决方案 / Proposed Solution
+      description: 你希望这个功能是什么样的？
+      placeholder: |
+        例如：在结果页面增加
