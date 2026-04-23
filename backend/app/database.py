@@ -27,12 +27,17 @@ def _migrate_db():
     from sqlalchemy import text, inspect
     with engine.connect() as conn:
         inspector = inspect(engine)
+        # Skip if tables don't exist yet (first run / fresh install)
+        if not inspector.has_table('optimization_segments'):
+            return
         # Add polished_text to optimization_segments
         cols = [c['name'] for c in inspector.get_columns('optimization_segments')]
         if 'polished_text' not in cols:
             conn.execute(text("ALTER TABLE optimization_segments ADD COLUMN polished_text TEXT"))
             conn.commit()
         # Add api_request_interval to app_config
+        if not inspector.has_table('app_config'):
+            return
         cols = [c['name'] for c in inspector.get_columns('app_config')]
         if 'api_request_interval' not in cols:
             conn.execute(text("ALTER TABLE app_config ADD COLUMN api_request_interval INTEGER DEFAULT 6"))
