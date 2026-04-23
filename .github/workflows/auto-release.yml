@@ -1,0 +1,92 @@
+name: Auto Release on Main Push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Bump version
+      id: bump
+      shell: pwsh
+      run: |
+        $version = (Get-Content VERSION -Raw).Trim()
+        $parts = $version -split '\.'
+        $major = [int]$parts[0]
+        $minor = [int]$parts[1]
+        $patch = [int]$parts[2] + 1
+        $newVersion = "$major.$minor.$patch"
+        $newVersion | Out-File -Encoding utf8NoBOM VERSION
+        Write-Output "version=$newVersion" >> $env:GITHUB_OUTPUT
+        Write-Output "tag=v$newVersion" >> $env:GITHUB_OUTPUT
+        Write-Output "Bumped version to $newVersion"
+
+    - name: Commit version bump and tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add VERSION
+        git commit -m "chore(release): bump version to ${{ steps.bump.outputs.version }}"
+        git tag ${{ steps.bump.outputs.tag }}
+        git push origin main
+        git push origin ${{ steps.bump.outputs.tag }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Python dependencies
+      run: |
+        pip install -r backend/requirements.txt
+        pip install pyinstaller
+
+    - name: Install frontend dependencies and build
+      run: cd frontend && npm ci && npm run build
+
+    - name: Build with PyInstaller
+      run: pyinstaller myzero.spec --clean --noconfirm
+
+    - name: Copy runtime assets
+      run: |
+        copy backend\.env.example dist\MyZero\.env
+
+    - name: Install Inno Setup
+      run: choco install innosetup --yes
+
+    - name: Download ChineseSimplified language file
+      run: |
+        curl -L -o "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl" https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl
+
+    - name: Build installer
+      run: ISCC installer.iss
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.bump.outputs.tag }}
+        name: MyZero ${{ steps.bump.outputs.version }}
+        files: output/MyZero-Setup-*.exe
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
