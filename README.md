@@ -57,8 +57,15 @@
 ---
 
 ## 📸 界面预览
+- 首页
+<img width="1517" height="1147" alt="PixPin_2026-04-23_12-29-23" src="https://github.com/user-attachments/assets/9b9d2ff2-769b-4519-ada3-4a4cbe8e2a28" />
 
-<img width="1529" height="1265" alt="PixPin_2026-04-23_12-22-07" src="https://github.com/user-attachments/assets/9813c872-2be9-49b0-b246-19091cafe925" />
+- 最近记录
+<img width="1518" height="864" alt="PixPin_2026-04-23_12-30-32" src="https://github.com/user-attachments/assets/58811a54-954f-4705-bd0e-4b0fbe745c8d" />
+
+
+- 润色详情界面
+<img width="1517" height="1245" alt="PixPin_2026-04-23_12-29-47" src="https://github.com/user-attachments/assets/80a79757-9060-45d6-bcd6-ddca2a6cbc23" />
 
 ---
 
