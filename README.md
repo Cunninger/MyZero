@@ -58,9 +58,7 @@
 
 ## 📸 界面预览
 
-> 你可以在此区域放置应用截图或演示 GIF，让读者直观了解界面效果。
->
-> 建议尺寸：宽度 `800px` 左右，使用 `./assets/screenshot.png` 引用。
+<img width="1529" height="1265" alt="PixPin_2026-04-23_12-22-07" src="https://github.com/user-attachments/assets/9813c872-2be9-49b0-b246-19091cafe925" />
 
 ---
 
