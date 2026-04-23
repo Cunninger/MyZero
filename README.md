@@ -11,6 +11,7 @@
 <p align="center">
   <a href="https://github.com/cunninger/MyZero/releases"><img src="https://img.shields.io/github/v/release/cunninger/MyZero?style=flat-square" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="License"></a>
+  <a href="https://github.com/cunninger/MyZero/stargazers"><img src="https://img.shields.io/github/stars/cunninger/MyZero?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/Python-3.10+-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js">
   <img src="https://img.shields.io/github/last-commit/cunninger/MyZero?style=flat-square" alt="Last Commit">
