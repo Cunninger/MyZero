@@ -86,7 +86,7 @@ if __name__ == "__main__":
         threading.Thread(target=open_browser, daemon=True).start()
 
     uvicorn.run(
-        "app.main:app",
+        app,
         host=settings.server_host,
         port=port,
         reload=settings.debug if not is_frozen() else False
