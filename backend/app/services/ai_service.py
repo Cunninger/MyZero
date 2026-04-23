@@ -477,19 +477,33 @@ class AIService:
         return results
 
     def compute_changes_detail(self, before: str, after: str) -> Dict[str, Any]:
-        """Compute detailed changes between before and after text."""
+        """Compute detailed changes between before and after text (character-level)."""
         import difflib
-        diff = list(difflib.ndiff(before.split(), after.split()))
-        removed = [item[2:] for item in diff if item.startswith('- ')]
-        added = [item[2:] for item in diff if item.startswith('+ ')]
+        sm = difflib.SequenceMatcher(None, before, after)
+        removed_chars = []
+        added_chars = []
+        removed_fragments = []
+        added_fragments = []
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if tag == 'delete':
+                removed_chars.extend(before[i1:i2])
+                removed_fragments.append(before[i1:i2])
+            elif tag == 'insert':
+                added_chars.extend(after[j1:j2])
+                added_fragments.append(after[j1:j2])
+            elif tag == 'replace':
+                removed_chars.extend(before[i1:i2])
+                added_chars.extend(after[j1:j2])
+                removed_fragments.append(before[i1:i2])
+                added_fragments.append(after[j1:j2])
         return {
             "before_length": len(before),
             "after_length": len(after),
             "length_delta": len(after) - len(before),
-            "removed_words": removed[:20],
-            "added_words": added[:20],
-            "removed_count": len(removed),
-            "added_count": len(added),
+            "removed_words": removed_fragments[:20],
+            "added_words": added_fragments[:20],
+            "removed_count": len(removed_chars),
+            "added_count": len(added_chars),
         }
 
     async def test_connection(self):

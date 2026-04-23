@@ -559,12 +559,12 @@ const ResultPage = () => {
                       <div className="mt-3 flex flex-wrap gap-2">
                         {change.changes_detail.added_count > 0 && (
                           <span className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded-md font-medium">
-                            +{change.changes_detail.added_count} 新增词
+                            +{change.changes_detail.added_count} 新增字符
                           </span>
                         )}
                         {change.changes_detail.removed_count > 0 && (
                           <span className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded-md font-medium">
-                            -{change.changes_detail.removed_count} 删除词
+                            -{change.changes_detail.removed_count} 删除字符
                           </span>
                         )}
                       </div>
