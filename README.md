@@ -5,7 +5,7 @@
 <h1 align="center">MyZero</h1>
 
 <p align="center">
-  AI 学术写作助手 — 文本润色、AIGC 降重与综合优化
+  AI 学术写作助手 — 文本润色、AIGC 降重与综合优化 
 </p>
 
 <p align="center">
