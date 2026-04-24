@@ -115,7 +115,7 @@ class ProgressUpdate(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    version: str = "1.0.0"
+    version: str = "1.0.6"
 
 
 class LatexConvertRequest(BaseModel):
