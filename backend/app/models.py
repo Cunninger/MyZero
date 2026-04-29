@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -60,7 +60,7 @@ class ChangeLog(Base):
 
 class AppConfig(Base):
     __tablename__ = "app_config"
-    
+
     id = Column(Integer, primary_key=True)
     api_key = Column(String(255), default="")
     base_url = Column(String(255), default="https://api.openai.com/v1")
@@ -71,3 +71,18 @@ class AppConfig(Base):
     dark_mode = Column(Boolean, default=False)
     api_request_interval = Column(Integer, default=6)
     mineru_api_token = Column(String(255), default="")
+    prompt_templates = Column(Text, nullable=True)  # JSON: custom templates
+    active_template_id = Column(String(50), default="default")  # Current active template
+
+
+class UsageStats(Base):
+    """Usage statistics tracking table"""
+    __tablename__ = "usage_stats"
+
+    id = Column(Integer, primary_key=True)
+    date = Column(Date, index=True)  # Statistics date
+    total_characters = Column(Integer, default=0)  # Total characters processed
+    total_records = Column(Integer, default=0)  # Total records processed
+    mode_counts = Column(Text, nullable=True)  # JSON: {"polish": 10, "humanize": 5, "combined": 8}
+    api_token_usage = Column(Integer, default=0)  # Estimated token usage
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

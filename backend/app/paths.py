@@ -2,7 +2,7 @@ import os
 import sys
 
 
-MYZERO_VERSION = "1.0.0"
+MYZERO_VERSION = "1.0.6"
 
 
 def is_frozen() -> bool:

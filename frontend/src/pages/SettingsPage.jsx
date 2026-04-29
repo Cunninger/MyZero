@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save, TestTube, Key, Sliders, ChevronDown, Globe, Eye, EyeOff, FileSearch } from 'lucide-react'
+import { ArrowLeft, Save, TestTube, Key, Sliders, ChevronDown, Globe, Eye, EyeOff, FileSearch, Sparkles } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { configAPI } from '../api'
 
@@ -130,6 +130,8 @@ const SettingsPage = () => {
     api_request_interval: 6,
     mineru_api_token: '',
   })
+  const [templates, setTemplates] = useState({ domain: [], journal: [], general: [] })
+  const [activeTemplateId, setActiveTemplateId] = useState('default')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
@@ -141,16 +143,29 @@ const SettingsPage = () => {
 
   useEffect(() => {
     loadConfig()
+    loadTemplates()
   }, [])
 
   const loadConfig = async () => {
     try {
       const response = await configAPI.get()
       setConfig(response.data)
+      if (response.data.active_template_id) {
+        setActiveTemplateId(response.data.active_template_id)
+      }
     } catch (error) {
       toast.error('加载配置失败')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadTemplates = async () => {
+    try {
+      const response = await configAPI.getTemplates()
+      setTemplates(response.data)
+    } catch (error) {
+      console.error('加载模板失败:', error)
     }
   }
 
@@ -194,6 +209,16 @@ const SettingsPage = () => {
       model_name: provider.models[0].id,
     }))
     setProviderOpen(false)
+  }
+
+  const handleSelectTemplate = async (templateId) => {
+    try {
+      await configAPI.setActiveTemplate(templateId)
+      setActiveTemplateId(templateId)
+      toast.success('模板已激活')
+    } catch (error) {
+      toast.error('激活模板失败')
+    }
   }
 
   if (isLoading) {
@@ -384,6 +409,85 @@ const SettingsPage = () => {
             后可解析 200MB/200页
           </p>
         </div>
+      </div>
+
+      {/* Prompt Templates */}
+      <div className="card-static p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-amber-50">
+            <Sparkles className="w-4 h-4 text-amber-600" />
+          </div>
+          <h2 className="text-lg font-serif font-semibold text-slate-800">Prompt 模板</h2>
+        </div>
+        <p className="text-sm text-slate-500">
+          选择不同领域或期刊风格的模板，AI 将按照相应的写作风格进行优化
+        </p>
+
+        {/* Domain Templates */}
+        {templates.domain?.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">领域模板</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {templates.domain.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => handleSelectTemplate(tpl.id)}
+                  className={`p-3 rounded-lg text-center transition-all ${
+                    activeTemplateId === tpl.id
+                      ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <div className="text-sm font-medium">{tpl.name}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Journal Style Templates */}
+        {templates.journal?.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">期刊风格</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {templates.journal.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => handleSelectTemplate(tpl.id)}
+                  className={`p-3 rounded-lg text-center transition-all ${
+                    activeTemplateId === tpl.id
+                      ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <div className="text-sm font-medium">{tpl.name}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* General Templates */}
+        {templates.general?.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">通用模板</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {templates.general.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => handleSelectTemplate(tpl.id)}
+                  className={`p-3 rounded-lg text-center transition-all ${
+                    activeTemplateId === tpl.id
+                      ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <div className="text-sm font-medium">{tpl.name}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Processing Options */}

@@ -1,6 +1,7 @@
 import httpx
 import re
 import json
+import asyncio
 from typing import Optional, List, Dict, Any, Callable
 from app.config import get_settings
 
@@ -158,9 +159,13 @@ def _filter_thinking_stream(buffer: str, in_thinking: bool) -> tuple:
 class AIService:
     def __init__(self):
         self._settings = get_settings()
+        self._cached_db_config = None
 
     def _get_db_config(self) -> Optional[Dict[str, Any]]:
-        """Read config from DB app_config table."""
+        """Read config from DB app_config table (with caching)."""
+        if self._cached_db_config is not None:
+            return self._cached_db_config
+
         try:
             from app.database import SessionLocal
             from app.models import AppConfig
@@ -168,19 +173,25 @@ class AIService:
             try:
                 config = db.query(AppConfig).filter(AppConfig.id == 1).first()
                 if config and config.api_key:
-                    return {
+                    self._cached_db_config = {
                         "api_key": config.api_key,
                         "base_url": config.base_url,
                         "model_name": config.model_name,
                         "temperature": config.temperature,
                         "max_tokens": config.max_tokens,
                         "api_request_interval": config.api_request_interval or 0,
+                        "active_template_id": config.active_template_id,
                     }
+                    return self._cached_db_config
             finally:
                 db.close()
         except Exception:
             pass
         return None
+
+    def invalidate_config_cache(self):
+        """Invalidate the cached DB config. Call after config updates."""
+        self._cached_db_config = None
 
     def _get_api_key(self):
         db_config = self._get_db_config()
@@ -227,12 +238,31 @@ class AIService:
         messages = list(history or [])
         messages.append({"role": "system", "content": SYSTEM_MESSAGE})
 
-        if stage == "polish":
-            prompt = POLISH_STAGE_PROMPT
-        elif stage == "enhance":
-            prompt = ENHANCE_STAGE_PROMPT
+        # Check for custom template
+        db_config = self._get_db_config()
+        custom_template = None
+        if db_config and db_config.get("active_template_id"):
+            from app.services.prompt_template_service import prompt_template_service
+            template = prompt_template_service.get_template(db_config["active_template_id"])
+            if template:
+                custom_template = template
+
+        # Get prompt based on stage and template
+        if custom_template:
+            if stage == "polish":
+                prompt = custom_template.get("polish_prompt", POLISH_STAGE_PROMPT)
+            elif stage == "enhance":
+                prompt = custom_template.get("humanize_prompt", ENHANCE_STAGE_PROMPT)
+            else:
+                prompt = custom_template.get("polish_prompt", PROMPT_TEMPLATES["combined"])
         else:
-            prompt = PROMPT_TEMPLATES.get(stage, PROMPT_TEMPLATES["combined"])
+            # Use default prompts
+            if stage == "polish":
+                prompt = POLISH_STAGE_PROMPT
+            elif stage == "enhance":
+                prompt = ENHANCE_STAGE_PROMPT
+            else:
+                prompt = PROMPT_TEMPLATES.get(stage, PROMPT_TEMPLATES["combined"])
 
         messages.append({"role": "user", "content": prompt.format(text=text)})
         return messages
@@ -458,7 +488,7 @@ class AIService:
 
     async def optimize_segment(self, text: str, mode: str = "combined") -> str:
         """Async version of optimize_segment."""
-        return self.optimize_segment_sync(text, mode)
+        return await asyncio.to_thread(self.optimize_segment_sync, text, mode)
 
     async def optimize_text(self, text: str, mode: str = "combined") -> str:
         """Optimize text using AI API (single segment)."""
