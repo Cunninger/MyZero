@@ -1,9 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  darkMode: 'class',
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -22,16 +20,16 @@ export default {
         cta: {
           500: '#f97316',
           600: '#ea580c',
-        }
+        },
       },
       fontFamily: {
         serif: ['Crimson Pro', 'Georgia', 'serif'],
         sans: ['Atkinson Hyperlegible', 'system-ui', 'sans-serif'],
       },
       maxWidth: {
-        'prose': '65ch',
-      }
+        prose: '65ch',
+      },
     },
   },
   plugins: [],
-}
+};
