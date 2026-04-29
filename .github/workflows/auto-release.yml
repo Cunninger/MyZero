@@ -1,18 +1,9 @@
-name: Auto Release on Main Push
+name: Auto Release
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - 'README.md'
-      - 'README.en.md'
-      - 'CONTRIBUTING.md'
-      - '.editorconfig'
-      - 'assets/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/PULL_REQUEST_TEMPLATE.md'
-      - 'docs/**'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
 concurrency:
@@ -30,52 +21,43 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Resolve version
+      id: ver
+      shell: pwsh
+      run: |
+        if ("${{ github.ref_type }}" -eq "tag") {
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+        } else {
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "v$version"
+        }
+        Write-Output "version=$version" >> $env:GITHUB_OUTPUT
+        Write-Output "tag=$tag" >> $env:GITHUB_OUTPUT
+        Write-Output "Version: $version, Tag: $tag"
+
+    - name: Verify VERSION matches tag
+      shell: pwsh
+      run: |
+        $fileVersion = (Get-Content VERSION -Raw).Trim()
+        $expected = "${{ steps.ver.outputs.version }}"
+        if ($fileVersion -ne $expected) {
+          Write-Error "VERSION file ($fileVersion) does not match tag ($expected). Aborting."
+          exit 1
+        }
+        Write-Output "VERSION check passed: $fileVersion"
+
     - name: Get previous tag
       id: prev_tag
       shell: pwsh
       run: |
-        $tags = git tag --sort=-creatordate | Select-Object -First 2
-        if ($tags.Count -ge 2) {
-          Write-Output "tag=$($tags[1])" >> $env:GITHUB_OUTPUT
+        $currentTag = "${{ steps.ver.outputs.tag }}"
+        $tags = git tag --sort=-creatordate | Where-Object { $_ -ne $currentTag } | Select-Object -First 1
+        if ($tags) {
+          Write-Output "tag=$tags" >> $env:GITHUB_OUTPUT
         } else {
           Write-Output "tag=" >> $env:GITHUB_OUTPUT
         }
-
-    - name: Bump version
-      id: bump
-      shell: pwsh
-      run: |
-        $version = (Get-Content VERSION -Raw).Trim()
-        $parts = $version -split '\.'
-        $major = [int]$parts[0]
-        $minor = [int]$parts[1]
-        $patch = [int]$parts[2] + 1
-        $newVersion = "$major.$minor.$patch"
-        $tag = "v$newVersion"
-
-        # Tag collision check
-        $tagExists = git tag -l $tag
-        if ($tagExists) {
-          Write-Error "Tag $tag already exists. Aborting to avoid collision."
-          exit 1
-        }
-
-        $newVersion | Out-File -Encoding utf8NoBOM VERSION
-        Write-Output "version=$newVersion" >> $env:GITHUB_OUTPUT
-        Write-Output "tag=$tag" >> $env:GITHUB_OUTPUT
-        Write-Output "Bumped version to $newVersion"
-
-    - name: Commit version bump and tag
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add VERSION
-        git commit -m "chore(release): bump version to ${{ steps.bump.outputs.version }}"
-        git tag ${{ steps.bump.outputs.tag }}
-        git push origin main
-        git push origin ${{ steps.bump.outputs.tag }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Clean old artifacts
       shell: pwsh
@@ -123,18 +105,18 @@ jobs:
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.bump.outputs.tag }}
-        name: MyZero ${{ steps.bump.outputs.version }}
+        tag_name: ${{ steps.ver.outputs.tag }}
+        name: MyZero ${{ steps.ver.outputs.version }}
         body: |
           ## 更新内容
           本次版本包含问题修复与体验优化。
 
-          ${{ steps.prev_tag.outputs.tag != '' && format('**完整变更日志**: [{0}...{1}](../../compare/{0}...{1})', steps.prev_tag.outputs.tag, steps.bump.outputs.tag) || '' }}
+          ${{ steps.prev_tag.outputs.tag != '' && format('**完整变更日志**: [{0}...{1}](../../compare/{0}...{1})', steps.prev_tag.outputs.tag, steps.ver.outputs.tag) || '' }}
 
           ## 下载
           | 文件 | 大小 | 说明 |
           |------|------|------|
-          | `MyZero-Setup-${{ steps.bump.outputs.version }}.exe` | ~16 MB | Windows 安装包（推荐） |
+          | `MyZero-Setup-${{ steps.ver.outputs.version }}.exe` | ~16 MB | Windows 安装包（推荐） |
 
           ## 安装说明
           1. 下载上方的 `.exe` 安装包；
@@ -146,7 +128,7 @@ jobs:
           ## 校验文件完整性
           下载后可在 PowerShell 中执行：
           ```powershell
-          certutil -hashfile MyZero-Setup-${{ steps.bump.outputs.version }}.exe SHA256
+          certutil -hashfile MyZero-Setup-${{ steps.ver.outputs.version }}.exe SHA256
           ```
           将输出的哈希值与下方 `Assets` 中显示的 SHA256 比对即可。
         files: output/MyZero-Setup-*.exe
