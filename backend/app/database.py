@@ -45,6 +45,12 @@ def _migrate_db():
         if 'mineru_api_token' not in cols:
             conn.execute(text("ALTER TABLE app_config ADD COLUMN mineru_api_token VARCHAR(255) DEFAULT ''"))
             conn.commit()
+        if 'prompt_templates' not in cols:
+            conn.execute(text("ALTER TABLE app_config ADD COLUMN prompt_templates TEXT"))
+            conn.commit()
+        if 'active_template_id' not in cols:
+            conn.execute(text("ALTER TABLE app_config ADD COLUMN active_template_id VARCHAR(50) DEFAULT 'default'"))
+            conn.commit()
 
 
 _migrate_db()
