@@ -244,15 +244,15 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="flex items-center gap-4">
+    <div className="space-y-5 animate-fade-in stagger-children max-w-3xl mx-auto pb-8">
+      <div className="flex items-center gap-3">
         <button
           onClick={() => navigate('/')}
-          className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-2.5 hover:bg-teal-50 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
         >
-          <ArrowLeft className="w-5 h-5 text-slate-600" />
+          <ArrowLeft className="w-5 h-5 text-teal-700" />
         </button>
-        <h1 className="text-2xl font-serif font-bold text-slate-800">设置</h1>
+        <h1 className="text-2xl font-bold text-teal-900 tracking-tight">设置</h1>
       </div>
 
       {/* API 连接 */}
@@ -284,16 +284,16 @@ const SettingsPage = () => {
           {providerOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setProviderOpen(false)} />
-              <div className="absolute z-30 left-0 right-0 mt-1 bg-white rounded-xl border border-slate-200 shadow-xl max-h-80 overflow-y-auto animate-slide-down">
+              <div className="absolute z-30 left-0 right-0 mt-1.5 bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/50 max-h-80 overflow-y-auto animate-slide-down p-1">
                 {API_PROVIDERS.map((provider) => {
                   const isActive = activeProvider?.id === provider.id
                   return (
                     <button
                       key={provider.id}
                       onClick={() => selectProvider(provider)}
-                      className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors ${
+                      className={`w-full px-4 py-3 flex items-center justify-between text-left transition-all duration-150 rounded-lg ${
                         isActive
-                          ? 'bg-primary-50 text-primary-700'
+                          ? 'bg-teal-50 text-teal-700'
                           : 'hover:bg-slate-50 text-slate-700'
                       }`}
                     >
@@ -304,7 +304,7 @@ const SettingsPage = () => {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-400">{provider.models.length} 个模型</span>
                         {isActive && (
-                          <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-medium">当前</span>
+                          <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium">当前</span>
                         )}
                       </div>
                     </button>
@@ -315,21 +315,21 @@ const SettingsPage = () => {
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">API Key</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">API Key</label>
             <div className="relative">
               <input
                 type={showApiKey ? 'text' : 'password'}
                 value={config.api_key}
                 onChange={(e) => handleChange('api_key', e.target.value)}
                 placeholder="sk-..."
-                className="input-field pr-10"
+                className="input-field pr-10 transition-all duration-200"
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors p-1 rounded-md hover:bg-teal-50"
               >
                 {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -337,36 +337,36 @@ const SettingsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Base URL</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Base URL</label>
             <input
               type="url"
               value={config.base_url}
               onChange={(e) => handleChange('base_url', e.target.value)}
               placeholder="https://api.openai.com/v1"
-              className="input-field font-mono text-sm"
+              className="input-field font-mono text-sm transition-all duration-200"
             />
-            <p className="mt-1 text-xs text-slate-400">选择服务商后自动填充，也可手动输入自定义地址</p>
+            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">选择服务商后自动填充，也可手动输入自定义地址</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">模型</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">模型</label>
             <input
               type="text"
               value={config.model_name}
               onChange={(e) => handleChange('model_name', e.target.value)}
               placeholder="输入自定义模型名称..."
-              className="input-field font-mono text-sm"
+              className="input-field font-mono text-sm transition-all duration-200"
             />
             {activeProvider && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {activeProvider.models.map((model) => (
                   <button
                     key={model.id}
                     onClick={() => handleChange('model_name', model.id)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-all duration-150 ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all duration-200 ${
                       config.model_name === model.id
-                        ? 'bg-primary-100 text-primary-700 ring-1 ring-primary-200 font-medium'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? 'bg-teal-100 text-teal-700 ring-1 ring-teal-200 font-medium shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-white hover:shadow-sm hover:-translate-y-px'
                     }`}
                     title={model.desc}
                   >
@@ -411,16 +411,16 @@ const SettingsPage = () => {
 
         {templates.domain?.length > 0 && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">领域模板</label>
+            <label className="text-sm font-semibold text-slate-700">领域模板</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {templates.domain.map((tpl) => (
                 <button
                   key={tpl.id}
                   onClick={() => handleSelectTemplate(tpl.id)}
-                  className={`p-3 rounded-lg text-center transition-all ${
+                  className={`p-3 rounded-xl text-center transition-all duration-200 ${
                     activeTemplateId === tpl.id
-                      ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-200'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-200 shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-white hover:shadow-md hover:-translate-y-0.5'
                   }`}
                 >
                   <div className="text-sm font-medium">{tpl.name}</div>
@@ -432,16 +432,16 @@ const SettingsPage = () => {
 
         {templates.journal?.length > 0 && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">期刊风格</label>
+            <label className="text-sm font-semibold text-slate-700">期刊风格</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {templates.journal.map((tpl) => (
                 <button
                   key={tpl.id}
                   onClick={() => handleSelectTemplate(tpl.id)}
-                  className={`p-3 rounded-lg text-center transition-all ${
+                  className={`p-3 rounded-xl text-center transition-all duration-200 ${
                     activeTemplateId === tpl.id
-                      ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-200'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-200 shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-white hover:shadow-md hover:-translate-y-0.5'
                   }`}
                 >
                   <div className="text-sm font-medium">{tpl.name}</div>
@@ -453,16 +453,16 @@ const SettingsPage = () => {
 
         {templates.general?.length > 0 && (
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">通用模板</label>
+            <label className="text-sm font-semibold text-slate-700">通用模板</label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {templates.general.map((tpl) => (
                 <button
                   key={tpl.id}
                   onClick={() => handleSelectTemplate(tpl.id)}
-                  className={`p-3 rounded-lg text-center transition-all ${
+                  className={`p-3 rounded-xl text-center transition-all duration-200 ${
                     activeTemplateId === tpl.id
-                      ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-200'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-teal-100 text-teal-700 ring-2 ring-teal-200 shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-white hover:shadow-md hover:-translate-y-0.5'
                   }`}
                 >
                   <div className="text-sm font-medium">{tpl.name}</div>
@@ -508,11 +508,11 @@ const SettingsPage = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">默认模式</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">默认模式</label>
             <select
               value={config.default_mode}
               onChange={(e) => handleChange('default_mode', e.target.value)}
-              className="input-field"
+              className="input-field transition-all duration-200"
             >
               <option value="polish">论文润色</option>
               <option value="humanize">AIGC 降重</option>
@@ -522,8 +522,8 @@ const SettingsPage = () => {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">Temperature</label>
-              <span className="text-sm font-mono text-primary-600 bg-primary-50 px-2 py-0.5 rounded">
+              <label className="text-sm font-semibold text-slate-700">Temperature</label>
+              <span className="text-sm font-mono font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-100">
                 {config.temperature}
               </span>
             </div>
@@ -536,7 +536,7 @@ const SettingsPage = () => {
               onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
               className="range-slider"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
               <span>精确</span>
               <span>平衡</span>
               <span>创意</span>
@@ -544,21 +544,21 @@ const SettingsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">最大 Tokens</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">最大 Tokens</label>
             <input
               type="number"
               value={config.max_tokens}
               onChange={(e) => handleChange('max_tokens', parseInt(e.target.value))}
               min="1"
               max="32000"
-              className="input-field"
+              className="input-field transition-all duration-200"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">API 请求间隔</label>
-              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+              <label className="text-sm font-semibold text-slate-700">API 请求间隔</label>
+              <span className="text-sm font-mono font-semibold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-md border border-violet-100">
                 {config.api_request_interval || 0}s
               </span>
             </div>
@@ -571,12 +571,12 @@ const SettingsPage = () => {
               onChange={(e) => handleChange('api_request_interval', parseInt(e.target.value))}
               className="range-slider"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
               <span>无间隔</span>
               <span>防限流</span>
               <span>保守</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">段落处理之间的等待时间，避免触发 API 限流</p>
+            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">段落处理之间的等待时间，避免触发 API 限流</p>
           </div>
         </div>
       </CollapsibleSection>
@@ -590,25 +590,26 @@ const SettingsPage = () => {
         defaultOpen={false}
         badge="高级"
       >
-        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 leading-relaxed">
+        <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-800 leading-relaxed flex items-start gap-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
           以下设置通常无需调整，修改前请了解其作用
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Dark Mode */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 border border-slate-100">
             <div>
-              <label className="text-sm font-medium text-slate-700">深色模式</label>
-              <p className="text-xs text-slate-400">切换界面主题</p>
+              <label className="text-sm font-semibold text-slate-700">深色模式</label>
+              <p className="text-xs text-slate-400 mt-0.5">切换界面主题</p>
             </div>
             <button
               type="button"
               onClick={() => handleChange('dark_mode', !config.dark_mode)}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-                config.dark_mode ? 'bg-primary-500' : 'bg-slate-300'
+              className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+                config.dark_mode ? 'bg-teal-500' : 'bg-slate-300'
               }`}
             >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+              <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-200 ease-out ${
                 config.dark_mode ? 'translate-x-5' : 'translate-x-0'
               }`} />
             </button>
@@ -617,8 +618,8 @@ const SettingsPage = () => {
           {/* Compression Threshold */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">历史压缩阈值</label>
-              <span className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+              <label className="text-sm font-semibold text-slate-700">历史压缩阈值</label>
+              <span className="text-sm font-mono font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
                 {(config.compression_threshold ?? 5000).toLocaleString()} 字
               </span>
             </div>
@@ -631,12 +632,12 @@ const SettingsPage = () => {
               onChange={(e) => handleChange('compression_threshold', parseInt(e.target.value))}
               className="range-slider"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
               <span>1,000</span>
               <span>10,000</span>
               <span>20,000</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
               处理长文本时，当累计历史上下文超过此字数将自动压缩。值越大上下文连贯性越好，但消耗更多 Token
             </p>
           </div>
@@ -644,8 +645,8 @@ const SettingsPage = () => {
           {/* Segment Max Length */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">分段最大长度</label>
-              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+              <label className="text-sm font-semibold text-slate-700">分段最大长度</label>
+              <span className="text-sm font-mono font-semibold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-md border border-violet-100">
                 {config.segment_max_length || 500} 字
               </span>
             </div>
@@ -658,19 +659,19 @@ const SettingsPage = () => {
               onChange={(e) => handleChange('segment_max_length', parseInt(e.target.value))}
               className="range-slider"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
               <span>100</span>
               <span>1000</span>
               <span>2000</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">每段文本的最大字符数，超过此长度会自动拆分。数值越小并发度越高，但可能破坏段落连贯性</p>
+            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">每段文本的最大字符数，超过此长度会自动拆分。数值越小并发度越高，但可能破坏段落连贯性</p>
           </div>
 
           {/* Segment Skip Threshold */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">短段跳过阈值</label>
-              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+              <label className="text-sm font-semibold text-slate-700">短段跳过阈值</label>
+              <span className="text-sm font-mono font-semibold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-md border border-violet-100">
                 {config.segment_skip_threshold || 15} 字
               </span>
             </div>
@@ -683,19 +684,19 @@ const SettingsPage = () => {
               onChange={(e) => handleChange('segment_skip_threshold', parseInt(e.target.value))}
               className="range-slider"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
               <span>0</span>
               <span>50</span>
               <span>100</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">低于此字数的段落（如标题、章节名）将跳过 AI 处理，直接保留原文，节省 Token 消耗</p>
+            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">低于此字数的段落（如标题、章节名）将跳过 AI 处理，直接保留原文，节省 Token 消耗</p>
           </div>
 
           {/* API Timeout */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700">API 超时时间</label>
-              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+              <label className="text-sm font-semibold text-slate-700">API 超时时间</label>
+              <span className="text-sm font-mono font-semibold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-md border border-violet-100">
                 {config.api_timeout || 120}s
               </span>
             </div>
@@ -708,22 +709,22 @@ const SettingsPage = () => {
               onChange={(e) => handleChange('api_timeout', parseInt(e.target.value))}
               className="range-slider"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
               <span>30s</span>
               <span>165s</span>
               <span>300s</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">等待 AI 响应的最长时间。网络较慢或处理长文本时可适当增大</p>
+            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">等待 AI 响应的最长时间。网络较慢或处理长文本时可适当增大</p>
           </div>
         </div>
       </CollapsibleSection>
 
       {/* Save */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="btn-cta flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-cta flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98] transition-transform duration-150"
         >
           {isSaving ? (
             <>
