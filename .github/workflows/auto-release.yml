@@ -15,6 +15,10 @@ on:
       - 'docs/**'
   workflow_dispatch:
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: windows-latest
@@ -47,9 +51,18 @@ jobs:
         $minor = [int]$parts[1]
         $patch = [int]$parts[2] + 1
         $newVersion = "$major.$minor.$patch"
+        $tag = "v$newVersion"
+
+        # Tag collision check
+        $tagExists = git tag -l $tag
+        if ($tagExists) {
+          Write-Error "Tag $tag already exists. Aborting to avoid collision."
+          exit 1
+        }
+
         $newVersion | Out-File -Encoding utf8NoBOM VERSION
         Write-Output "version=$newVersion" >> $env:GITHUB_OUTPUT
-        Write-Output "tag=v$newVersion" >> $env:GITHUB_OUTPUT
+        Write-Output "tag=$tag" >> $env:GITHUB_OUTPUT
         Write-Output "Bumped version to $newVersion"
 
     - name: Commit version bump and tag
