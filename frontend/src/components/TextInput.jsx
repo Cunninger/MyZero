@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, Upload, X } from 'lucide-react'
+import { FileText, Upload, X, Paperclip, ArrowUp } from 'lucide-react'
+import LoadingSpinner from './LoadingSpinner'
 
 const VALID_EXTENSIONS = ['txt', 'docx', 'md', 'markdown', 'pdf', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp']
 
-const TextInput = ({ value, onChange, onSubmit, isLoading }) => {
+const TextInput = ({ value, onChange, onSubmit, isLoading, variant = 'default' }) => {
   const [stats, setStats] = useState({ chars: 0, words: 0 })
   const [dragOver, setDragOver] = useState(false)
   const [focused, setFocused] = useState(false)
   const fileInputRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('myzero_draft')
@@ -28,6 +30,13 @@ const TextInput = ({ value, onChange, onSubmit, isLoading }) => {
       words: chineseChars + englishWords
     })
   }, [value])
+
+  useEffect(() => {
+    if (variant === 'chat' && textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px'
+    }
+  }, [value, variant])
 
   const isValidFile = useCallback((file) => {
     if (!file) return false
@@ -66,7 +75,6 @@ const TextInput = ({ value, onChange, onSubmit, isLoading }) => {
     } else {
       handleTextFile(file)
     }
-    // Reset input so same file can be selected again
     e.target.value = ''
   }, [onChange, handleTextFile])
 
@@ -74,6 +82,88 @@ const TextInput = ({ value, onChange, onSubmit, isLoading }) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       onSubmit()
     }
+  }
+
+  if (variant === 'chat') {
+    return (
+      <div className="relative">
+        <div
+          className={`flex items-end gap-2 rounded-xl border bg-white px-3 py-2 transition-all duration-200 ${
+            focused
+              ? 'border-primary-400 ring-2 ring-primary-400/20'
+              : dragOver
+                ? 'border-cta-400 bg-orange-50/50'
+                : 'border-slate-300'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={handleDrop}
+        >
+          {dragOver && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-orange-50/80 rounded-xl border-2 border-dashed border-cta-400">
+              <p className="text-sm font-medium text-cta-600">释放文件以上传</p>
+            </div>
+          )}
+
+          <label
+            htmlFor="file-upload-chat"
+            className="shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+            aria-label="上传文件"
+          >
+            <Paperclip className="w-5 h-5" />
+          </label>
+
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="输入或粘贴论文文本..."
+            rows={1}
+            className="flex-1 resize-none bg-transparent py-1.5 text-sm font-serif leading-relaxed placeholder:text-slate-400 focus:outline-none max-h-[200px] overflow-y-auto"
+            disabled={isLoading}
+          />
+
+          <button
+            onClick={onSubmit}
+            disabled={isLoading || !value.trim()}
+            className="shrink-0 p-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="提交"
+          >
+            {isLoading ? (
+              <LoadingSpinner size="sm" color="white" />
+            ) : (
+              <ArrowUp className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between mt-1.5 px-1">
+          <span className="text-xs text-slate-400">
+            {value ? `${stats.chars.toLocaleString()} 字符` : 'Ctrl+Enter 提交'}
+          </span>
+          {value && (
+            <button
+              onClick={() => onChange('')}
+              className="text-xs text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+            >
+              清空
+            </button>
+          )}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".txt,.docx,.md,.markdown,.pdf,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.gif,.bmp"
+          onChange={handleFileSelect}
+          className="hidden"
+          id="file-upload-chat"
+        />
+      </div>
+    )
   }
 
   return (
@@ -90,7 +180,7 @@ const TextInput = ({ value, onChange, onSubmit, isLoading }) => {
         {value && (
           <button
             onClick={() => onChange('')}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
             清空

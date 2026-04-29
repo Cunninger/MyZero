@@ -51,8 +51,11 @@ export const optimizeAPI = {
   retry: (id) =>
     api.post(`/optimize/${id}/retry`),
 
-  export: (id) =>
-    api.post(`/optimize/${id}/export`),
+  export: (id, format = 'txt') =>
+    api.post(`/optimize/${id}/export`, null, {
+      params: { format },
+      responseType: 'blob',
+    }),
 
   getStreamUrl: (id) =>
     `/api/optimize/${id}/stream`,
@@ -72,14 +75,23 @@ export const historyAPI = {
 
 // Config API
 export const configAPI = {
-  get: () => 
+  get: () =>
     api.get('/config'),
-  
-  update: (data) => 
+
+  update: (data) =>
     api.put('/config', data),
-  
-  testConnection: () => 
+
+  testConnection: () =>
     api.post('/config/test'),
+
+  getTemplates: () =>
+    api.get('/config/templates'),
+
+  getTemplate: (templateId) =>
+    api.get(`/config/templates/${templateId}`),
+
+  setActiveTemplate: (templateId) =>
+    api.put('/config/active-template', null, { params: { template_id: templateId } }),
 }
 
 // Tools API
@@ -91,9 +103,18 @@ export const toolsAPI = {
     api.post('/tools/mermaid-generate', { description, diagram_type: diagramType, language }),
 }
 
+// Stats API
+export const statsAPI = {
+  getSummary: () =>
+    api.get('/stats/summary'),
+
+  getTrend: (days = 30) =>
+    api.get('/stats/trend', { params: { days } }),
+}
+
 // Health check
 export const healthAPI = {
-  check: () => 
+  check: () =>
     api.get('/health'),
 }
 

@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   ArrowLeft, Download, FileText, GitCompare,
-  CheckCircle, XCircle, Loader2, Square, Copy, Check, Shield, X
+  CheckCircle, XCircle, Loader2, Square, Copy, Check, Shield, X, Eye
 } from 'lucide-react'
 import { optimizeAPI } from '../api'
+import RevisionViewer from '../components/RevisionViewer'
 
 const ResultPage = () => {
   const { id } = useParams()
@@ -14,11 +15,13 @@ const ResultPage = () => {
   const [segments, setSegments] = useState([])
   const [changes, setChanges] = useState([])
   const [activeTab, setActiveTab] = useState('result')
+  const [revisionMode, setRevisionMode] = useState(false)
   const [progress, setProgress] = useState({ completed: 0, total: 0 })
   const [copied, setCopied] = useState(false)
   const [streamingText, setStreamingText] = useState('')
   const [currentStage, setCurrentStage] = useState('')
   const [showExportModal, setShowExportModal] = useState(false)
+  const [exportFormat, setExportFormat] = useState('txt')
   const [stageProgress, setStageProgress] = useState({ stageIndex: 0, totalStages: 1 })
   const [overallProgress, setOverallProgress] = useState(0)
   const [parsingMessage, setParsingMessage] = useState('')
@@ -155,8 +158,8 @@ const ResultPage = () => {
         }
 
         if (data.type === 'timeout') {
-          es.close()
-          eventSourceRef.current = null
+          cleanup()
+          toast.error('连接超时，请刷新页面重试')
         }
       } catch (err) {
         console.error('SSE parse error:', err)
@@ -217,14 +220,19 @@ const ResultPage = () => {
 
   const handleExport = async () => {
     try {
-      const response = await optimizeAPI.export(id)
-      const content = response.data.content
-      const filename = response.data.filename
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+      const response = await optimizeAPI.export(id, exportFormat)
+      const blob = new Blob([response.data], {
+        type: exportFormat === 'docx'
+          ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          : exportFormat === 'markdown'
+          ? 'text/markdown'
+          : 'text/plain'
+      })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = filename
+      const ext = exportFormat === 'docx' ? 'docx' : exportFormat === 'markdown' ? 'md' : 'txt'
+      a.download = `myzero_optimized_${id}.${ext}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -496,6 +504,23 @@ const ResultPage = () => {
 
         {activeTab === 'compare' && (
           <div className="min-h-[500px] animate-fade-in">
+            {/* Mode toggle */}
+            {changes.length > 0 && (
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setRevisionMode(!revisionMode)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                    revisionMode
+                      ? 'bg-violet-100 text-violet-700'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Eye className="w-4 h-4" />
+                  {revisionMode ? '修订模式' : '对照模式'}
+                </button>
+              </div>
+            )}
+
             {changes.length === 0 ? (
               <div className="text-center py-16">
                 <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-300">
@@ -504,7 +529,34 @@ const ResultPage = () => {
                 <p className="text-slate-500 font-medium">暂无变更记录</p>
                 <p className="text-sm text-slate-400 mt-1">文本可能未做修改或变更记录尚未生成</p>
               </div>
+            ) : revisionMode ? (
+              // Revision mode
+              <div className="space-y-6 stagger-children">
+                {changes.map((change) => (
+                  <div key={change.id} className="border border-slate-200 rounded-xl p-5 bg-white">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="bg-gradient-to-r from-primary-50 to-blue-50 text-primary-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-primary-100">
+                        段落 {change.segment_index + 1}
+                      </span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                        change.stage === 'enhance'
+                          ? 'bg-violet-100 text-violet-700'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {change.stage === 'polish' ? '润色' : change.stage === 'enhance' ? '增强' : getModeLabel(record.mode)}
+                      </span>
+                    </div>
+                    <RevisionViewer
+                      beforeText={change.before_text}
+                      afterText={change.after_text}
+                      onAccept={() => toast.success('已接受变更')}
+                      onReject={() => toast('已拒绝变更')}
+                    />
+                  </div>
+                ))}
+              </div>
             ) : (
+              // Side-by-side comparison mode (original)
               <div className="space-y-4 stagger-children">
                 {changes.map((change) => (
                   <div
@@ -607,6 +659,31 @@ const ResultPage = () => {
                 >
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
+              </div>
+
+              {/* Format Selection */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">选择导出格式</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'txt', label: 'TXT', desc: '纯文本' },
+                    { id: 'docx', label: 'Word', desc: '.docx 文档' },
+                    { id: 'markdown', label: 'Markdown', desc: '.md 文件' },
+                  ].map((fmt) => (
+                    <button
+                      key={fmt.id}
+                      onClick={() => setExportFormat(fmt.id)}
+                      className={`p-3 rounded-lg text-center transition-all ${
+                        exportFormat === fmt.id
+                          ? 'bg-primary-100 text-primary-700 ring-2 ring-primary-200'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{fmt.label}</div>
+                      <div className="text-xs opacity-75 mt-0.5">{fmt.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-3 text-sm text-slate-600">
