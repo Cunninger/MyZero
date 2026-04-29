@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Trash2, Zap, Clock, CheckCircle, XCircle, Loader2, RefreshCw, FileText } from 'lucide-react'
+import { ArrowLeft, Trash2, Clock, CheckCircle, XCircle, Loader2, RefreshCw, FileText } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { historyAPI, optimizeAPI } from '../api'
+import { getModeLabel, getModeColor } from '../utils/modeConfig'
 
 const HistoryPage = () => {
   const [history, setHistory] = useState([])
@@ -52,11 +53,6 @@ const HistoryPage = () => {
     } catch (error) {
       toast.error('删除失败')
     }
-  }
-
-  const getModeLabel = (modeId) => {
-    const labels = { polish: '论文润色', humanize: 'AIGC 降重', combined: '综合优化' }
-    return labels[modeId] || modeId
   }
 
   const getStatusDisplay = (status) => {
@@ -144,8 +140,8 @@ const HistoryPage = () => {
                     </p>
 
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-primary-50 text-primary-700 rounded-full">
-                        <Zap className="w-3 h-3" />
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${getModeColor(item.mode).bg} ${getModeColor(item.mode).text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${getModeColor(item.mode).dot}`} />
                         {getModeLabel(item.mode)}
                       </span>
                       <span className="flex items-center gap-1 text-xs text-slate-400">

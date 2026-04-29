@@ -10,6 +10,11 @@ const TextInput = ({ value, onChange, onSubmit, isLoading, variant = 'default' }
   const [focused, setFocused] = useState(false)
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
+  const containerRef = useRef(null)
+  const [inputHeight, setInputHeight] = useState(null)
+  const isResizing = useRef(false)
+  const startY = useRef(0)
+  const startHeight = useRef(0)
 
   useEffect(() => {
     const saved = localStorage.getItem('myzero_draft')
@@ -32,11 +37,11 @@ const TextInput = ({ value, onChange, onSubmit, isLoading, variant = 'default' }
   }, [value])
 
   useEffect(() => {
-    if (variant === 'chat' && textareaRef.current) {
+    if (variant === 'chat' && !inputHeight && textareaRef.current) {
       textareaRef.current.style.height = 'auto'
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px'
     }
-  }, [value, variant])
+  }, [value, variant, inputHeight])
 
   const isValidFile = useCallback((file) => {
     if (!file) return false
@@ -84,30 +89,100 @@ const TextInput = ({ value, onChange, onSubmit, isLoading, variant = 'default' }
     }
   }
 
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault()
+    isResizing.current = true
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY
+    startY.current = clientY
+    const currentH = containerRef.current?.offsetHeight
+    startHeight.current = inputHeight || currentH || 80
+    document.body.style.cursor = 'ns-resize'
+    document.body.style.userSelect = 'none'
+  }, [inputHeight])
+
+  const handleResizeReset = useCallback(() => {
+    setInputHeight(null)
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleMove = (clientY) => {
+      if (!isResizing.current) return
+      const delta = startY.current - clientY
+      const maxH = window.innerHeight * 0.65
+      const newH = Math.max(80, Math.min(maxH, startHeight.current + delta))
+      setInputHeight(newH)
+    }
+
+    const onMouseMove = (e) => handleMove(e.clientY)
+    const onTouchMove = (e) => {
+      if (!isResizing.current) return
+      e.preventDefault()
+      if (e.touches.length === 1) handleMove(e.touches[0].clientY)
+    }
+
+    const onEnd = () => {
+      if (!isResizing.current) return
+      isResizing.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onEnd)
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onEnd)
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onEnd)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [])
+
   if (variant === 'chat') {
     return (
-      <div className="relative">
+      <div
+        ref={containerRef}
+        className="relative flex flex-col"
+        style={inputHeight ? { height: inputHeight } : undefined}
+      >
         <div
-          className={`flex items-end gap-2 rounded-xl border bg-white px-3 py-2 transition-all duration-200 ${
+          className="flex justify-center py-1 cursor-ns-resize group"
+          onMouseDown={handleResizeStart}
+          onTouchStart={handleResizeStart}
+          onDoubleClick={handleResizeReset}
+          title="拖拽调整高度 · 双击重置"
+        >
+          <div className={`w-8 h-1 rounded-full transition-colors duration-200 ${
+            inputHeight ? 'bg-primary-300 group-hover:bg-primary-500' : 'bg-slate-200 group-hover:bg-primary-400'
+          }`} />
+        </div>
+
+        <div
+          className={`flex gap-2.5 rounded-2xl border bg-white px-4 py-3 transition-all duration-300 ${
             focused
-              ? 'border-primary-400 ring-2 ring-primary-400/20'
+              ? 'border-primary-400/60 shadow-lg shadow-primary-500/10 ring-4 ring-primary-50'
               : dragOver
-                ? 'border-cta-400 bg-orange-50/50'
-                : 'border-slate-300'
-          }`}
+                ? 'border-cta-400 bg-orange-50/50 shadow-md shadow-cta-500/5'
+                : 'border-slate-200/80 shadow-sm hover:shadow-md hover:border-slate-300'
+          } ${inputHeight ? 'flex-1 min-h-0' : 'items-end'}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
         >
           {dragOver && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-orange-50/80 rounded-xl border-2 border-dashed border-cta-400">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-orange-50/90 backdrop-blur-sm rounded-2xl border-2 border-dashed border-cta-400">
               <p className="text-sm font-medium text-cta-600">释放文件以上传</p>
             </div>
           )}
 
           <label
             htmlFor="file-upload-chat"
-            className="shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+            className={`shrink-0 p-2 rounded-xl hover:bg-primary-50 text-slate-400 hover:text-primary-500 cursor-pointer transition-all duration-200 ${inputHeight ? 'self-end' : ''}`}
             aria-label="上传文件"
           >
             <Paperclip className="w-5 h-5" />
@@ -122,14 +197,16 @@ const TextInput = ({ value, onChange, onSubmit, isLoading, variant = 'default' }
             onBlur={() => setFocused(false)}
             placeholder="输入或粘贴论文文本..."
             rows={1}
-            className="flex-1 resize-none bg-transparent py-1.5 text-sm font-serif leading-relaxed placeholder:text-slate-400 focus:outline-none max-h-[200px] overflow-y-auto"
+            className={`flex-1 resize-none bg-transparent py-1 text-[15px] font-serif leading-relaxed placeholder:text-slate-400 focus:outline-none overflow-y-auto ${
+              inputHeight ? '' : 'max-h-[200px]'
+            }`}
             disabled={isLoading}
           />
 
           <button
             onClick={onSubmit}
             disabled={isLoading || !value.trim()}
-            className="shrink-0 p-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className={`shrink-0 p-2.5 rounded-xl bg-gradient-to-br from-primary-600 to-blue-600 text-white hover:from-primary-700 hover:to-blue-700 active:scale-95 disabled:opacity-30 disabled:active:scale-100 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer ${inputHeight ? 'self-end' : ''}`}
             aria-label="提交"
           >
             {isLoading ? (
@@ -140,14 +217,14 @@ const TextInput = ({ value, onChange, onSubmit, isLoading, variant = 'default' }
           </button>
         </div>
 
-        <div className="flex items-center justify-between mt-1.5 px-1">
-          <span className="text-xs text-slate-400">
+        <div className="flex items-center justify-between mt-2 px-1">
+          <span className="text-xs text-slate-400/80 transition-all duration-200">
             {value ? `${stats.chars.toLocaleString()} 字符` : 'Ctrl+Enter 提交'}
           </span>
           {value && (
             <button
               onClick={() => onChange('')}
-              className="text-xs text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+              className="text-xs text-slate-400 hover:text-red-500 transition-colors duration-200 cursor-pointer"
             >
               清空
             </button>

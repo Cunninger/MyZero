@@ -18,7 +18,7 @@ from app.schemas import (
     SegmentResponse, ChangeLogResponse, RecordDetailResponse,
     ProgressUpdate
 )
-from app.services.ai_service import ai_service, count_text_length, SEGMENT_SKIP_THRESHOLD
+from app.services.ai_service import ai_service, count_text_length
 from app.services.mineru_service import mineru_service, needs_mineru
 from app.services.stats_service import stats_service
 
@@ -33,7 +33,13 @@ sse_active: Dict[int, bool] = {}
 cancelled_records: set = set()
 cancelled_lock = threading.Lock()
 
-COMPRESSION_THRESHOLD = 5000
+def _get_compression_threshold():
+    db = SessionLocal()
+    try:
+        config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+        return config.compression_threshold if config and config.compression_threshold else 5000
+    finally:
+        db.close()
 
 
 def process_mineru_upload(record_id: int, file_bytes: bytes, filename: str, mode: str):
@@ -200,7 +206,7 @@ def process_optimization(record_id: int, text: str, mode: str):
                 db.commit()
 
                 # Skip short segments (titles)
-                if count_text_length(segment.original_text) < SEGMENT_SKIP_THRESHOLD:
+                if count_text_length(segment.original_text) < ai_service._get_segment_skip_threshold():
                     if stage == "polish":
                         segment.polished_text = segment.original_text
                     segment.optimized_text = segment.original_text
@@ -289,7 +295,7 @@ def process_optimization(record_id: int, text: str, mode: str):
                     total_chars += len(result)
 
                     # Compress history if needed
-                    if total_chars > COMPRESSION_THRESHOLD:
+                    if total_chars > _get_compression_threshold():
                         history = ai_service.compress_history_sync(history, stage)
                         total_chars = sum(len(m.get("content", "")) for m in history)
                         add_sse_message(record_id, {"type": "history_compressed", "stage": stage})

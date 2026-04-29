@@ -1,26 +1,15 @@
 import React from 'react'
-import { Sparkles, Shield, Wand2, Check } from 'lucide-react'
-
-const modes = [
-  { id: 'polish', label: '论文润色', desc: '改善语言表达', icon: Sparkles, color: 'blue' },
-  { id: 'humanize', label: 'AIGC 降重', desc: '降低 AI 检测率', icon: Shield, color: 'violet' },
-  { id: 'combined', label: '综合优化', desc: '润色 + 降重', icon: Wand2, color: 'amber' },
-]
-
-const colorMap = {
-  blue: { bg: 'bg-blue-100', text: 'text-blue-600', activeBg: 'bg-blue-50', activeBorder: 'border-blue-400' },
-  violet: { bg: 'bg-violet-100', text: 'text-violet-600', activeBg: 'bg-violet-50', activeBorder: 'border-violet-400' },
-  amber: { bg: 'bg-amber-100', text: 'text-amber-600', activeBg: 'bg-amber-50', activeBorder: 'border-amber-400' },
-}
+import { Check } from 'lucide-react'
+import { MODES, COLOR_MAP } from '../utils/modeConfig'
 
 const ModeSelector = ({ value, onChange, variant = 'default' }) => {
   if (variant === 'cards') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {modes.map((mode) => {
+        {MODES.map((mode) => {
           const Icon = mode.icon
           const isActive = value === mode.id
-          const colors = colorMap[mode.color]
+          const colors = COLOR_MAP[mode.color]
 
           return (
             <button
@@ -54,7 +43,7 @@ const ModeSelector = ({ value, onChange, variant = 'default' }) => {
 
   return (
     <div className="grid grid-cols-3 gap-3">
-      {modes.map((mode) => {
+      {MODES.map((mode) => {
         const Icon = mode.icon
         const isActive = value === mode.id
 
