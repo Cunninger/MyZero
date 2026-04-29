@@ -87,8 +87,10 @@ ENHANCE_STAGE_PROMPT = """你是一位专业的学术写作专家。请对以下
 COMPRESS_PROMPT = """你是一位文本风格分析专家。请分析以下已处理的段落，提取出关键的写作风格特征、术语使用习惯和表达偏好。
 压缩后的内容应保留核心风格特征，不超过原文的30%。请直接输出压缩后的风格摘要，不要附加解释。"""
 
-# Threshold for skipping short segments (titles, separators)
-SEGMENT_SKIP_THRESHOLD = 15
+# Default values (overridden by DB config)
+DEFAULT_SEGMENT_SKIP_THRESHOLD = 15
+DEFAULT_SEGMENT_MAX_LENGTH = 500
+DEFAULT_API_TIMEOUT = 120.0
 
 SYSTEM_MESSAGE = "You are a professional academic writing assistant. You must output ONLY plain text. Never use Markdown formatting (no **bold**, no ## headings, no ```code blocks```, no * bullet points). Output the revised text directly."
 
@@ -233,6 +235,24 @@ class AIService:
             return db_config["api_request_interval"]
         return self._settings.api_request_interval
 
+    def _get_segment_max_length(self) -> int:
+        db_config = self._get_db_config()
+        if db_config and db_config.get("segment_max_length") is not None:
+            return db_config["segment_max_length"]
+        return DEFAULT_SEGMENT_MAX_LENGTH
+
+    def _get_segment_skip_threshold(self) -> int:
+        db_config = self._get_db_config()
+        if db_config and db_config.get("segment_skip_threshold") is not None:
+            return db_config["segment_skip_threshold"]
+        return DEFAULT_SEGMENT_SKIP_THRESHOLD
+
+    def _get_api_timeout(self) -> float:
+        db_config = self._get_db_config()
+        if db_config and db_config.get("api_timeout") is not None:
+            return float(db_config["api_timeout"])
+        return DEFAULT_API_TIMEOUT
+
     def _build_messages(self, text: str, stage: str, history: List[Dict] = None) -> List[Dict]:
         """Build messages array with history for API call."""
         messages = list(history or [])
@@ -267,8 +287,12 @@ class AIService:
         messages.append({"role": "user", "content": prompt.format(text=text)})
         return messages
 
-    def split_text_into_segments(self, text: str, max_length: int = 500) -> List[Dict[str, Any]]:
+    def split_text_into_segments(self, text: str, max_length: int = None) -> List[Dict[str, Any]]:
         """Split text into segments by single newline, then by sentence for long paragraphs."""
+        if max_length is None:
+            max_length = self._get_segment_max_length()
+        skip_threshold = self._get_segment_skip_threshold()
+
         paragraphs = text.split('\n')
         segments = []
 
@@ -278,7 +302,7 @@ class AIService:
                 continue
 
             if count_text_length(para) <= max_length:
-                is_title = count_text_length(para) < SEGMENT_SKIP_THRESHOLD
+                is_title = count_text_length(para) < skip_threshold
                 segments.append({"text": para, "is_title": is_title})
             else:
                 sentences = re.split(r'([。!?;])', para)
@@ -297,7 +321,7 @@ class AIService:
                     segments.append({"text": current, "is_title": False})
 
         if not segments and text.strip():
-            segments.append({"text": text.strip(), "is_title": count_text_length(text.strip()) < SEGMENT_SKIP_THRESHOLD})
+            segments.append({"text": text.strip(), "is_title": count_text_length(text.strip()) < skip_threshold})
 
         return segments
 
@@ -345,7 +369,8 @@ class AIService:
             in_thinking = False
             buffer = ""
 
-            with httpx.Client(timeout=120.0, trust_env=False) as client:
+            timeout = self._get_api_timeout()
+            with httpx.Client(timeout=timeout, trust_env=False) as client:
                 with client.stream("POST", f"{base_url}/chat/completions",
                                    json=payload, headers=headers) as response:
                     response.raise_for_status()
@@ -377,7 +402,8 @@ class AIService:
             return _clean_thinking_tags(full_text)
         else:
             # Non-streaming mode
-            with httpx.Client(timeout=120.0, trust_env=False) as client:
+            timeout = self._get_api_timeout()
+            with httpx.Client(timeout=timeout, trust_env=False) as client:
                 response = client.post(
                     f"{base_url}/chat/completions",
                     headers=headers,
@@ -419,7 +445,8 @@ class AIService:
         joined = "\n\n---段落分隔---\n\n".join(contents[-10:])  # Only compress last 10
 
         try:
-            with httpx.Client(timeout=60.0, trust_env=False) as client:
+            timeout = self._get_api_timeout()
+            with httpx.Client(timeout=timeout, trust_env=False) as client:
                 response = client.post(
                     f"{base_url}/chat/completions",
                     headers={
@@ -465,7 +492,8 @@ class AIService:
             "max_tokens": self._get_max_tokens(),
         }
 
-        with httpx.Client(timeout=120.0, trust_env=False) as client:
+        timeout = self._get_api_timeout()
+        with httpx.Client(timeout=timeout, trust_env=False) as client:
             response = client.post(
                 f"{base_url}/chat/completions",
                 headers={

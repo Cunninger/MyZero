@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft, Save, TestTube, Key, Sliders, ChevronDown, Globe, Eye, EyeOff, FileSearch, Sparkles } from 'lucide-react'
+import { ArrowLeft, Save, TestTube, Key, Sliders, ChevronDown, Globe, Eye, EyeOff, FileSearch, Sparkles, Settings } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import CollapsibleSection from '../components/CollapsibleSection'
 import { configAPI } from '../api'
 
 const API_PROVIDERS = [
@@ -127,8 +128,13 @@ const SettingsPage = () => {
     temperature: 0.7,
     max_tokens: 4096,
     default_mode: 'combined',
+    dark_mode: false,
     api_request_interval: 6,
     mineru_api_token: '',
+    segment_max_length: 500,
+    segment_skip_threshold: 15,
+    api_timeout: 120,
+    compression_threshold: 5000,
   })
   const [templates, setTemplates] = useState({ domain: [], journal: [], general: [] })
   const [activeTemplateId, setActiveTemplateId] = useState('default')
@@ -149,9 +155,17 @@ const SettingsPage = () => {
   const loadConfig = async () => {
     try {
       const response = await configAPI.get()
-      setConfig(response.data)
-      if (response.data.active_template_id) {
-        setActiveTemplateId(response.data.active_template_id)
+      const data = response.data
+      setConfig({
+        ...data,
+        segment_max_length: data.segment_max_length ?? 500,
+        segment_skip_threshold: data.segment_skip_threshold ?? 15,
+        api_timeout: data.api_timeout ?? 120,
+        dark_mode: data.dark_mode ?? false,
+        compression_threshold: data.compression_threshold ?? 5000,
+      })
+      if (data.active_template_id) {
+        setActiveTemplateId(data.active_template_id)
       }
     } catch (error) {
       toast.error('加载配置失败')
@@ -230,7 +244,7 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/')}
@@ -241,15 +255,14 @@ const SettingsPage = () => {
         <h1 className="text-2xl font-serif font-bold text-slate-800">设置</h1>
       </div>
 
-      {/* API Config */}
-      <div className="card-static p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary-50">
-            <Key className="w-4 h-4 text-primary-600" />
-          </div>
-          <h2 className="text-lg font-serif font-semibold text-slate-800">API 配置</h2>
-        </div>
-
+      {/* API 连接 */}
+      <CollapsibleSection
+        title="API 连接"
+        icon={Key}
+        iconBg="bg-primary-50"
+        iconColor="text-primary-600"
+        defaultOpen={true}
+      >
         {/* Provider Selector */}
         <div className="relative">
           <label className="block text-sm font-medium text-slate-700 mb-1.5">API 服务商</label>
@@ -335,7 +348,6 @@ const SettingsPage = () => {
             <p className="mt-1 text-xs text-slate-400">选择服务商后自动填充，也可手动输入自定义地址</p>
           </div>
 
-          {/* Model */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">模型</label>
             <input
@@ -383,47 +395,20 @@ const SettingsPage = () => {
             </>
           )}
         </button>
-      </div>
+      </CollapsibleSection>
 
-      {/* MinerU Document Parsing */}
-      <div className="card-static p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-50">
-            <FileSearch className="w-4 h-4 text-emerald-600" />
-          </div>
-          <h2 className="text-lg font-serif font-semibold text-slate-800">文档解析</h2>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">MinerU API Token（可选）</label>
-          <input
-            type="password"
-            value={config.mineru_api_token}
-            onChange={(e) => handleChange('mineru_api_token', e.target.value)}
-            placeholder="留空则使用免费轻量 API（≤10MB, ≤20页）"
-            className="input-field"
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            支持 PDF、PPT、图片上传解析。不填 Token 使用免费 API（限制 10MB/20页），
-            <a href="https://mineru.net/apiManage/docs?openApplyModal=true" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">申请 Token</a>
-            后可解析 200MB/200页
-          </p>
-        </div>
-      </div>
-
-      {/* Prompt Templates */}
-      <div className="card-static p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-amber-50">
-            <Sparkles className="w-4 h-4 text-amber-600" />
-          </div>
-          <h2 className="text-lg font-serif font-semibold text-slate-800">Prompt 模板</h2>
-        </div>
+      {/* Prompt 模板 */}
+      <CollapsibleSection
+        title="Prompt 模板"
+        icon={Sparkles}
+        iconBg="bg-amber-50"
+        iconColor="text-amber-600"
+        defaultOpen={true}
+      >
         <p className="text-sm text-slate-500">
           选择不同领域或期刊风格的模板，AI 将按照相应的写作风格进行优化
         </p>
 
-        {/* Domain Templates */}
         {templates.domain?.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">领域模板</label>
@@ -445,7 +430,6 @@ const SettingsPage = () => {
           </div>
         )}
 
-        {/* Journal Style Templates */}
         {templates.journal?.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">期刊风格</label>
@@ -467,7 +451,6 @@ const SettingsPage = () => {
           </div>
         )}
 
-        {/* General Templates */}
         {templates.general?.length > 0 && (
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-700">通用模板</label>
@@ -488,18 +471,55 @@ const SettingsPage = () => {
             </div>
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
-      {/* Processing Options */}
-      <div className="card-static p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-violet-50">
-            <Sliders className="w-4 h-4 text-violet-600" />
-          </div>
-          <h2 className="text-lg font-serif font-semibold text-slate-800">处理选项</h2>
+      {/* 文档解析 */}
+      <CollapsibleSection
+        title="文档解析"
+        icon={FileSearch}
+        iconBg="bg-emerald-50"
+        iconColor="text-emerald-600"
+        defaultOpen={true}
+      >
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">MinerU API Token（可选）</label>
+          <input
+            type="password"
+            value={config.mineru_api_token}
+            onChange={(e) => handleChange('mineru_api_token', e.target.value)}
+            placeholder="留空则使用免费轻量 API（≤10MB, ≤20页）"
+            className="input-field"
+          />
+          <p className="mt-1 text-xs text-slate-400">
+            支持 PDF、PPT、图片上传解析。不填 Token 使用免费 API（限制 10MB/20页），
+            <a href="https://mineru.net/apiManage/docs?openApplyModal=true" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">申请 Token</a>
+            后可解析 200MB/200页
+          </p>
         </div>
+      </CollapsibleSection>
 
+      {/* 处理参数 */}
+      <CollapsibleSection
+        title="处理参数"
+        icon={Sliders}
+        iconBg="bg-violet-50"
+        iconColor="text-violet-600"
+        defaultOpen={false}
+      >
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">默认模式</label>
+            <select
+              value={config.default_mode}
+              onChange={(e) => handleChange('default_mode', e.target.value)}
+              className="input-field"
+            >
+              <option value="polish">论文润色</option>
+              <option value="humanize">AIGC 降重</option>
+              <option value="combined">综合优化</option>
+            </select>
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-slate-700">Temperature</label>
@@ -536,19 +556,6 @@ const SettingsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">默认模式</label>
-            <select
-              value={config.default_mode}
-              onChange={(e) => handleChange('default_mode', e.target.value)}
-              className="input-field"
-            >
-              <option value="polish">论文润色</option>
-              <option value="humanize">AIGC 降重</option>
-              <option value="combined">综合优化</option>
-            </select>
-          </div>
-
-          <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-slate-700">API 请求间隔</label>
               <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
@@ -572,7 +579,144 @@ const SettingsPage = () => {
             <p className="mt-1 text-xs text-slate-400">段落处理之间的等待时间，避免触发 API 限流</p>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
+
+      {/* 高级设置 */}
+      <CollapsibleSection
+        title="高级设置"
+        icon={Settings}
+        iconBg="bg-slate-100"
+        iconColor="text-slate-600"
+        defaultOpen={false}
+        badge="高级"
+      >
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 leading-relaxed">
+          以下设置通常无需调整，修改前请了解其作用
+        </div>
+
+        <div className="space-y-4">
+          {/* Dark Mode */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-slate-700">深色模式</label>
+              <p className="text-xs text-slate-400">切换界面主题</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleChange('dark_mode', !config.dark_mode)}
+              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
+                config.dark_mode ? 'bg-primary-500' : 'bg-slate-300'
+              }`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                config.dark_mode ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </div>
+
+          {/* Compression Threshold */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700">历史压缩阈值</label>
+              <span className="text-sm font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                {(config.compression_threshold ?? 5000).toLocaleString()} 字
+              </span>
+            </div>
+            <input
+              type="range"
+              min="1000"
+              max="20000"
+              step="500"
+              value={config.compression_threshold ?? 5000}
+              onChange={(e) => handleChange('compression_threshold', parseInt(e.target.value))}
+              className="range-slider"
+            />
+            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+              <span>1,000</span>
+              <span>10,000</span>
+              <span>20,000</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              处理长文本时，当累计历史上下文超过此字数将自动压缩。值越大上下文连贯性越好，但消耗更多 Token
+            </p>
+          </div>
+
+          {/* Segment Max Length */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700">分段最大长度</label>
+              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+                {config.segment_max_length || 500} 字
+              </span>
+            </div>
+            <input
+              type="range"
+              min="100"
+              max="2000"
+              step="50"
+              value={config.segment_max_length || 500}
+              onChange={(e) => handleChange('segment_max_length', parseInt(e.target.value))}
+              className="range-slider"
+            />
+            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+              <span>100</span>
+              <span>1000</span>
+              <span>2000</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">每段文本的最大字符数，超过此长度会自动拆分。数值越小并发度越高，但可能破坏段落连贯性</p>
+          </div>
+
+          {/* Segment Skip Threshold */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700">短段跳过阈值</label>
+              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+                {config.segment_skip_threshold || 15} 字
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={config.segment_skip_threshold ?? 0}
+              onChange={(e) => handleChange('segment_skip_threshold', parseInt(e.target.value))}
+              className="range-slider"
+            />
+            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+              <span>0</span>
+              <span>50</span>
+              <span>100</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">低于此字数的段落（如标题、章节名）将跳过 AI 处理，直接保留原文，节省 Token 消耗</p>
+          </div>
+
+          {/* API Timeout */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700">API 超时时间</label>
+              <span className="text-sm font-mono text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+                {config.api_timeout || 120}s
+              </span>
+            </div>
+            <input
+              type="range"
+              min="30"
+              max="300"
+              step="10"
+              value={config.api_timeout || 120}
+              onChange={(e) => handleChange('api_timeout', parseInt(e.target.value))}
+              className="range-slider"
+            />
+            <div className="flex justify-between text-xs text-slate-400 mt-1.5">
+              <span>30s</span>
+              <span>165s</span>
+              <span>300s</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">等待 AI 响应的最长时间。网络较慢或处理长文本时可适当增大</p>
+          </div>
+        </div>
+      </CollapsibleSection>
 
       {/* Save */}
       <div className="flex justify-end">

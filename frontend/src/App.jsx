@@ -12,7 +12,7 @@ import { useSidebarState } from './hooks/useSidebarState'
 export const HistoryRefreshContext = createContext({ refresh: () => {} })
 
 function App() {
-  const { isOpen, toggle } = useSidebarState()
+  const { isOpen, toggle, width, startResize } = useSidebarState()
   const sidebarRef = useRef({ refresh: () => {} })
 
   const setRefresh = useCallback((fn) => {
@@ -26,7 +26,7 @@ function App() {
   return (
     <HistoryRefreshContext.Provider value={{ refresh: refreshHistory }}>
       <div className="flex h-screen overflow-hidden bg-slate-50">
-        <Sidebar isOpen={isOpen} onToggle={toggle} onRefreshRef={setRefresh} />
+        <Sidebar isOpen={isOpen} onToggle={toggle} onRefreshRef={setRefresh} width={width} startResize={startResize} />
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar */}

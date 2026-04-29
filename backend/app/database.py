@@ -51,6 +51,18 @@ def _migrate_db():
         if 'active_template_id' not in cols:
             conn.execute(text("ALTER TABLE app_config ADD COLUMN active_template_id VARCHAR(50) DEFAULT 'default'"))
             conn.commit()
+        if 'segment_max_length' not in cols:
+            conn.execute(text("ALTER TABLE app_config ADD COLUMN segment_max_length INTEGER DEFAULT 500"))
+            conn.commit()
+        if 'segment_skip_threshold' not in cols:
+            conn.execute(text("ALTER TABLE app_config ADD COLUMN segment_skip_threshold INTEGER DEFAULT 15"))
+            conn.commit()
+        if 'api_timeout' not in cols:
+            conn.execute(text("ALTER TABLE app_config ADD COLUMN api_timeout INTEGER DEFAULT 120"))
+            conn.commit()
+        if 'compression_threshold' not in cols:
+            conn.execute(text("ALTER TABLE app_config ADD COLUMN compression_threshold INTEGER DEFAULT 5000"))
+            conn.commit()
 
 
 _migrate_db()

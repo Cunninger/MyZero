@@ -73,6 +73,10 @@ class AppConfig(Base):
     mineru_api_token = Column(String(255), default="")
     prompt_templates = Column(Text, nullable=True)  # JSON: custom templates
     active_template_id = Column(String(50), default="default")  # Current active template
+    segment_max_length = Column(Integer, default=500)  # Max chars per segment
+    segment_skip_threshold = Column(Integer, default=15)  # Min chars to skip AI processing
+    api_timeout = Column(Integer, default=120)  # API request timeout in seconds
+    compression_threshold = Column(Integer, default=5000)  # History context compression threshold
 
 
 class UsageStats(Base):

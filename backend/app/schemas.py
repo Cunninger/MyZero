@@ -84,6 +84,10 @@ class ConfigUpdate(BaseModel):
     api_request_interval: Optional[int] = Field(None, ge=0, le=60)
     mineru_api_token: Optional[str] = None
     active_template_id: Optional[str] = None
+    segment_max_length: Optional[int] = Field(None, ge=100, le=2000)
+    segment_skip_threshold: Optional[int] = Field(None, ge=0, le=100)
+    api_timeout: Optional[int] = Field(None, ge=30, le=300)
+    compression_threshold: Optional[int] = Field(None, ge=1000, le=50000)
 
 
 class ConfigResponse(BaseModel):
@@ -97,6 +101,10 @@ class ConfigResponse(BaseModel):
     api_request_interval: int
     mineru_api_token: str
     active_template_id: str
+    segment_max_length: int
+    segment_skip_threshold: int
+    api_timeout: int
+    compression_threshold: int
 
     class Config:
         from_attributes = True

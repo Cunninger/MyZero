@@ -86,7 +86,7 @@ const HomePage = () => {
         </div>
       </div>
 
-      <div className="border-t border-slate-200 bg-white">
+      <div className="bg-gradient-to-t from-slate-50/80 to-white border-t border-slate-100">
         <div className="max-w-3xl mx-auto px-4 py-3">
           <TextInput
             value={text}

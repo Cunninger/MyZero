@@ -2,16 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   PenTool, PanelLeftClose, PanelLeftOpen, Plus, Search,
-  Wrench, BarChart3, Settings, Trash2, Zap, Clock,
+  Wrench, BarChart3, Settings, Trash2,
   CheckCircle, XCircle, Loader2
 } from 'lucide-react'
 import { historyAPI, optimizeAPI } from '../api'
 import toast from 'react-hot-toast'
-
-const getModeLabel = (modeId) => {
-  const labels = { polish: '论文润色', humanize: 'AIGC 降重', combined: '综合优化' }
-  return labels[modeId] || modeId
-}
+import { getModeLabel, getModeColor, getModeDotClass, MODES } from '../utils/modeConfig'
 
 const getStatusDisplay = (status) => {
   switch (status) {
@@ -53,10 +49,11 @@ const SidebarLink = ({ to, icon, label, isOpen }) => {
   )
 }
 
-const Sidebar = ({ isOpen, onToggle, onRefreshRef }) => {
+const Sidebar = ({ isOpen, onToggle, onRefreshRef, width, startResize }) => {
   const [history, setHistory] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [modeFilter, setModeFilter] = useState(null)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -110,13 +107,19 @@ const Sidebar = ({ isOpen, onToggle, onRefreshRef }) => {
   }, [])
 
   const filteredHistory = useMemo(() => {
-    if (!searchQuery.trim()) return history
-    const q = searchQuery.toLowerCase()
-    return history.filter(item =>
-      item.original_text.toLowerCase().includes(q) ||
-      getModeLabel(item.mode).toLowerCase().includes(q)
-    )
-  }, [history, searchQuery])
+    let result = history
+    if (modeFilter) {
+      result = result.filter(item => item.mode === modeFilter)
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(item =>
+        item.original_text.toLowerCase().includes(q) ||
+        getModeLabel(item.mode).toLowerCase().includes(q)
+      )
+    }
+    return result
+  }, [history, searchQuery, modeFilter])
 
   return (
     <>
@@ -130,11 +133,12 @@ const Sidebar = ({ isOpen, onToggle, onRefreshRef }) => {
       )}
 
       <aside
+        style={{ width: isOpen ? width : 64 }}
         className={`
           fixed md:static inset-y-0 left-0 z-40
           flex flex-col bg-white border-r border-slate-200
           transition-all duration-300 ease-out
-          ${isOpen ? 'w-[260px] translate-x-0' : 'w-[260px] -translate-x-full md:translate-x-0 md:w-[64px]'}
+          ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
         {/* Header */}
@@ -185,6 +189,42 @@ const Sidebar = ({ isOpen, onToggle, onRefreshRef }) => {
           </div>
         )}
 
+        {/* Mode filter chips */}
+        {isOpen && (
+          <div className="px-3 pb-2 shrink-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={() => setModeFilter(null)}
+                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all duration-150 cursor-pointer ${
+                  modeFilter === null
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                全部
+              </button>
+              {MODES.map(mode => {
+                const colors = getModeColor(mode.id)
+                const isActive = modeFilter === mode.id
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setModeFilter(isActive ? null : mode.id)}
+                    className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all duration-150 cursor-pointer ${
+                      isActive
+                        ? `${colors.bg} ${colors.text} ${colors.chipBorder}`
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? colors.dot : 'bg-slate-300'}`} />
+                    {mode.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* History list */}
         <div className="flex-1 overflow-y-auto px-2 py-1 sidebar-scroll min-h-0">
           {isLoading ? (
@@ -222,8 +262,8 @@ const Sidebar = ({ isOpen, onToggle, onRefreshRef }) => {
                       </p>
                       {isOpen && (
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                            <Zap className="w-2.5 h-2.5" />
+                          <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${getModeColor(item.mode).bg} ${getModeColor(item.mode).text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${getModeDotClass(item.mode)}`} />
                             {getModeLabel(item.mode)}
                           </span>
                           <span className="text-[10px] text-slate-400">
@@ -256,6 +296,16 @@ const Sidebar = ({ isOpen, onToggle, onRefreshRef }) => {
           <SidebarLink to="/settings" icon={<Settings className="w-4 h-4" />} label="设置" isOpen={isOpen} />
         </div>
       </aside>
+
+      {/* Resize handle */}
+      {isOpen && (
+        <div
+          onMouseDown={startResize}
+          className="hidden md:flex w-1.5 cursor-col-resize items-center justify-center hover:bg-primary-200/40 active:bg-primary-300/60 transition-colors duration-150 shrink-0 group relative"
+        >
+          <div className="w-0.5 h-8 rounded-full bg-slate-300 group-hover:bg-primary-400 group-active:bg-primary-500 transition-colors duration-150" />
+        </div>
+      )}
     </>
   )
 }
