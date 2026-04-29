@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import List, Dict, Optional
@@ -7,6 +7,9 @@ import threading
 import time
 import json
 import io
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 from app.database import get_db, SessionLocal
 from app.models import OptimizationRecord, OptimizationSegment, ChangeLog, AppConfig
@@ -17,6 +20,7 @@ from app.schemas import (
 )
 from app.services.ai_service import ai_service, count_text_length, SEGMENT_SKIP_THRESHOLD
 from app.services.mineru_service import mineru_service, needs_mineru
+from app.services.stats_service import stats_service
 
 router = APIRouter(prefix="/optimize", tags=["optimization"])
 
@@ -72,6 +76,7 @@ def process_mineru_upload(record_id: int, file_bytes: bytes, filename: str, mode
 
     except Exception as e:
         try:
+            db.rollback()
             record = db.query(OptimizationRecord).filter(OptimizationRecord.id == record_id).first()
             if record:
                 record.status = "failed"
@@ -331,6 +336,9 @@ def process_optimization(record_id: int, text: str, mode: str):
         record.completed_at = datetime.now()
         db.commit()
 
+        # Record usage statistics
+        stats_service.record_completion(record_id, record.original_text, record.mode, db)
+
         add_sse_message(record_id, {
             "type": "completed",
             "total_segments": total_segments,
@@ -574,26 +582,48 @@ async def retry_failed_segments(record_id: int, background_tasks: BackgroundTask
             from datetime import datetime
             rec = db_retry.query(OptimizationRecord).filter(OptimizationRecord.id == record_id).first()
             rec.optimized_text = '\n\n'.join(s.optimized_text or s.original_text for s in all_segs)
-            rec.status = "completed"
+
+            # Check if any segments are still failed
+            remaining_failed = db_retry.query(OptimizationSegment).filter(
+                OptimizationSegment.record_id == record_id,
+                OptimizationSegment.status == "failed"
+            ).count()
+
+            if remaining_failed > 0:
+                rec.status = "failed"
+                rec.error_message = f"重试后仍有 {remaining_failed} 个段落处理失败"
+            else:
+                rec.status = "completed"
             rec.completed_at = datetime.now()
             db_retry.commit()
 
-            add_sse_message(record_id, {
-                "type": "completed",
-                "total_segments": rec.total_segments,
-                "optimized_text": rec.optimized_text,
-                "record_id": record_id,
-                "mode": rec.mode,
-                "original_text": rec.original_text,
-            })
+            if remaining_failed > 0:
+                add_sse_message(record_id, {
+                    "type": "failed",
+                    "error": rec.error_message,
+                    "record_id": record_id,
+                })
+            else:
+                add_sse_message(record_id, {
+                    "type": "completed",
+                    "total_segments": rec.total_segments,
+                    "optimized_text": rec.optimized_text,
+                    "record_id": record_id,
+                    "mode": rec.mode,
+                    "original_text": rec.original_text,
+                })
             cleanup_sse(record_id)
 
         except Exception as e:
-            rec = db_retry.query(OptimizationRecord).filter(OptimizationRecord.id == record_id).first()
-            if rec:
-                rec.status = "failed"
-                rec.error_message = str(e)[:500]
-                db_retry.commit()
+            try:
+                db_retry.rollback()
+                rec = db_retry.query(OptimizationRecord).filter(OptimizationRecord.id == record_id).first()
+                if rec:
+                    rec.status = "failed"
+                    rec.error_message = str(e)[:500]
+                    db_retry.commit()
+            except Exception:
+                pass
             add_sse_message(record_id, {"type": "failed", "error": str(e)[:200]})
             cleanup_sse(record_id)
         finally:
@@ -796,9 +826,63 @@ async def stream_optimization_progress(record_id: int, db: Session = Depends(get
     )
 
 
+def _export_to_docx(segments: List, record_title: str = "") -> io.BytesIO:
+    """Export segments to DOCX format."""
+    doc = Document()
+
+    # Title
+    if record_title:
+        title = doc.add_heading(record_title, level=1)
+        title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    # Content
+    for seg in segments:
+        text = seg.optimized_text or seg.original_text
+        if not text:
+            continue
+
+        # Check if it's a title (short line)
+        if len(text.strip()) < 50 and '\n' not in text:
+            para = doc.add_heading(text.strip(), level=2)
+        else:
+            # Regular paragraph
+            for line in text.split('\n'):
+                if line.strip():
+                    para = doc.add_paragraph(line.strip())
+                    para.style = 'Normal'
+
+    # Save to BytesIO
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def _export_to_markdown(segments: List) -> str:
+    """Export segments to Markdown format."""
+    lines = []
+    for seg in segments:
+        text = seg.optimized_text or seg.original_text
+        if not text:
+            continue
+
+        # Check if it's a title
+        if len(text.strip()) < 50 and '\n' not in text:
+            lines.append(f"## {text.strip()}")
+        else:
+            lines.append(text.strip())
+        lines.append("")  # Empty line between paragraphs
+
+    return '\n'.join(lines)
+
+
 @router.post("/{record_id}/export")
-async def export_optimization(record_id: int, db: Session = Depends(get_db)):
-    """Export optimized text."""
+async def export_optimization(
+    record_id: int,
+    format: str = Query("txt", description="Export format: txt, docx, or markdown"),
+    db: Session = Depends(get_db),
+):
+    """Export optimized text in various formats."""
     record = db.query(OptimizationRecord).filter(OptimizationRecord.id == record_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
@@ -809,10 +893,31 @@ async def export_optimization(record_id: int, db: Session = Depends(get_db)):
         OptimizationSegment.record_id == record_id
     ).order_by(OptimizationSegment.segment_index).all()
 
-    final_text = '\n\n'.join(seg.optimized_text or seg.original_text for seg in segments)
+    if format == "docx":
+        buffer = _export_to_docx(segments, f"MyZero 优化结果 #{record.id}")
+        filename = f"myzero_optimized_{record.id}.docx"
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
 
-    return JSONResponse({
-        "content": final_text,
-        "filename": f"myzero_optimized_{record_id}.txt",
-        "format": "txt",
-    })
+    elif format == "markdown":
+        content = _export_to_markdown(segments)
+        buffer = io.BytesIO(content.encode('utf-8'))
+        filename = f"myzero_optimized_{record.id}.md"
+        return StreamingResponse(
+            buffer,
+            media_type="text/markdown",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+
+    else:  # txt (default)
+        final_text = '\n\n'.join(seg.optimized_text or seg.original_text for seg in segments)
+        buffer = io.BytesIO(final_text.encode('utf-8'))
+        filename = f"myzero_optimized_{record.id}.txt"
+        return StreamingResponse(
+            buffer,
+            media_type="text/plain",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )

@@ -83,6 +83,7 @@ class ConfigUpdate(BaseModel):
     dark_mode: Optional[bool] = None
     api_request_interval: Optional[int] = Field(None, ge=0, le=60)
     mineru_api_token: Optional[str] = None
+    active_template_id: Optional[str] = None
 
 
 class ConfigResponse(BaseModel):
@@ -95,7 +96,8 @@ class ConfigResponse(BaseModel):
     dark_mode: bool
     api_request_interval: int
     mineru_api_token: str
-    
+    active_template_id: str
+
     class Config:
         from_attributes = True
 

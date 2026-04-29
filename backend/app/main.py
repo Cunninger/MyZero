@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 
 from app.database import engine, Base
 from app.paths import get_static_dir, is_frozen, MYZERO_VERSION
-from app.routers import optimize, history, config, tools
+from app.routers import optimize, history, config, tools, stats
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ app.include_router(optimize.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
 app.include_router(tools.router, prefix="/api")
+app.include_router(stats.router, prefix="/api")
 
 
 @app.get("/health")
